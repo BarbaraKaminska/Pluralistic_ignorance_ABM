@@ -60,11 +60,13 @@ def Page():
             solara.SliderInt("Group size (q)", value=q, min=1, max=10, disabled=is_running.value)
             solara.SliderFloat("Probability (p)", value=p, min=0.0, max=1.0, step=0.01, disabled=is_running.value)
             solara.SliderInt("Steps", value=steps, min=1, max=2000, disabled=is_running.value)
+            solara.Markdown(f"##N = {N.value},\t q = {q.value},\t p = {p.value},\t steps = {steps.value}")
         with solara.Card():
             solara.Markdown("### Network Parameters (Watts-Strogatz)")
             solara.SliderInt("Average degree (k)", value=k, min=5, max=100, disabled=is_running.value, 
             on_value=lambda _ : k.set(min(k.value, N.value - 1)))  # Ensure k <= N-1
-            solara.SliderFloat("Rewiring probability (beta)", value=beta, min=0.0, max=1.0, step=0.01, disabled=is_running.value)
+            solara.SliderFloat(f"Rewiring probability (beta))", value=beta, min=0.0, max=1.0, step=0.01, disabled=is_running.value)
+            solara.Markdown(f"##k = {k.value},\t" + r"$\beta$" + f" = {beta.value}")
 
     with solara.Card():
         solara.Markdown("### Model Control")

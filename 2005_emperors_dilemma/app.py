@@ -1,9 +1,6 @@
 # To do 
-# 1. Moore vs von Neumann neighborhood
-# 2. Add enforcement and compliance to the network visualization
-# 3. Legend to network visualization
-# 4. Markdown: real fraction of believers
-# 5. step by step algorithm
+# 1. Legend to network visualization
+# 4. Check if propoerly disabled / enabled buttons, etc.
 
 
 

@@ -28,10 +28,12 @@ opinion_to_update = solara.reactive("Private Opinion")
 response = solara.reactive("Conformity")
 target = solara.reactive(None)
 agent_id = solara.reactive(None)  # For selecting an agent
-q_panel = solara.reactive(None)
+target_neighbors = solara.reactive(None)
 rerendere = solara.reactive(True)  # To trigger re-rendering
 opinion_evolution = solara.reactive(np.empty((steps.value, N.value)))  # To store opinion evolution
 attitude_evolution = solara.reactive(np.empty((steps.value, N.value)))  # To store attitude evolution
+current_substep = solara.reactive(0)
+step_message = solara.reactive("Setup the model and select a target agent to start.")
 
 
 
@@ -63,6 +65,13 @@ def Page():
             solara.Text(f"Step: {current_step.value} / {steps.value}")
 
 
+    with solara.Card():
+        solara.Markdown("### Algorithm - Step-by-Step")        
+        with solara.Row():
+            solara.Button("Target", on_click= select_target, disabled=is_running.value or (model.value is None))   
+            solara.Button("Next step", on_click=lambda: next_single_step(current_substep.value), disabled=is_running.value or (model.value is None))
+            solara.Markdown(f"{step_message.value}")
+
 
 
     with solara.Row():  # Side-by-side layout
@@ -89,11 +98,20 @@ def Page():
                 data = get_opinion_grid(model.value)
 
                 plt.figure(figsize=(6, 6))
-                sns.heatmap(data, cmap="RdBu", vmin=0, vmax=1, cbar_kws={'label': 'Opinion'})
+                ax = sns.heatmap(data, cmap="RdBu", vmin=0, vmax=1, cbar_kws={'label': 'Opinion'})
                 plt.title("Opinions of agents")
                 plt.tight_layout()
                 plt.xlim(-0.5, data.shape[1] + 0.5)
                 plt.ylim(-0.5, data.shape[0] + 0.5)
+                if target.value is not None:
+                    row, col = target.value.pos
+                    rect = plt.Rectangle((col, row), 1, 1, fill=False, edgecolor='k', linewidth=4)
+                    ax.add_patch(rect)
+                if target_neighbors.value is not None:
+                    for neighbor in target_neighbors.value:
+                        row, col = neighbor.pos
+                        rect = plt.Rectangle((col, row), 1, 1, fill=False, edgecolor='k', linewidth=2)
+                        ax.add_patch(rect)
             else:
                 
                 plt.figure(figsize=(6, 6))
@@ -111,7 +129,7 @@ def Page():
             if model.value is not None and rerendere.value:    
                 for i in range(N.value):
                     plt.scatter(np.arange(steps.value), opinion_evolution.value[:, i], s=1, color='red')
-                print(f"opinion_evolution: {opinion_evolution.value[0, :]}")
+                # print(f"opinion_evolution: {opinion_evolution.value[0, :]}")
                 plt.xlabel("time step")
                 plt.ylabel("value")
                 plt.ylim(0, 1)
@@ -177,7 +195,8 @@ def setup_model():
     model.value = m
     # model_data = m.datacollector.get_model_vars_dataframe()
     history.value = ([], [], [], [])  # Reset history
-    current_step.value = 0
+    current_step.value = "0"
+    step_message.value = "Model setup complete. Select a target agent to start the step-by-step process."
 
 
 def get_opinion_grid(model):
@@ -263,3 +282,34 @@ def stop_model():
         run_model_app.cancel()
     is_running.value = False
     solara.Info("Model stopped.")
+
+def select_target():
+    if model.value is not None:
+        all_nodes = list(model.value.grid.agents)
+        # print(f"all_nodes: {all_nodes}")
+        target.value = np.random.choice(all_nodes)
+        current_substep.value = "1"
+        step_message.value = f"Selected target agent: {target.value.pos}."
+        target_neighbors.value = target.value.neighbors
+        print(f"{target_neighbors.value}")
+
+
+def next_single_step(current_substep_value):
+    # current_substep.value = current_substep_value+1
+    if model.value is not None and target.value is not None:        
+        # graph = model.value.graph
+        # all_nodes = list(graph.nodes)
+        # node_key = all_nodes[target.value]  # Get the actual node key
+        # target_agent = graph.nodes[node_key]["agent"]
+
+        match current_substep.value:
+            case "1":
+                step_message.value, current_substep.value = target.value.update_step1_message()
+            case "2":
+                step_message.value, current_substep.value = target.value.update_step2_message()
+            case "3a":
+                step_message.value, current_substep.value = target.value.update_step3a_message()
+            case "4":
+                step_message.value, current_substep.value = target.value.update_step4_message()
+            case _:
+                step_message.value, current_substep.value = "Update completed. Click 'Target' to select a new agent.", "0"

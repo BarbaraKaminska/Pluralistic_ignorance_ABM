@@ -18,13 +18,14 @@ import asyncio
 from solara.lab import task
 
 # === Solara App ===
-steps = solara.reactive(50)
+steps = solara.reactive(20)
 current_step = solara.reactive(0)
 is_running = solara.reactive(False)
 N = solara.reactive(25)
 N_believers = solara.reactive(10)  # Percentage of believers
 real_fraction_believers = solara.reactive(N_believers.value)  # Placeholder for real fraction of believers
-k = solara.reactive(0.125)
+K = solara.reactive(0.125)
+k = solara.reactive(15)
 beta = solara.reactive(0.5)
 target = solara.reactive(None)
 rerendere = solara.reactive(True)  # To trigger re-rendering
@@ -50,8 +51,9 @@ def Page():
             solara.SliderInt("Agents (N)", value=N, min=10, max=1000, disabled=is_running.value,
             on_value=lambda _ : N.set(max((k.value+1), N.value)))  # Ensure k <= N-1
             solara.SliderInt("Percentage of believers", value=N_believers, min=0, max=100, disabled=is_running.value)
-            solara.SliderInt("Steps", value=steps, min=1, max=2000, disabled=is_running.value)
+            solara.SliderInt("Steps", value=steps, min=1, max=200, disabled=is_running.value)
             solara.Markdown(f"### Selected N = {N.value}; \t Steps = {steps.value}; \t Percentage of believers = {real_fraction_believers} %")
+            solara.Markdown(f"### False believers = {false_believers(model.value) if model.value is not None else 0:.2f} %")
 
         with solara.Card():
             solara.Markdown("### Network Parameters")
@@ -139,7 +141,7 @@ def Page():
                     all_nodes = list(graph.nodes)
                     node = all_nodes[target.value]  # safe, no KeyError here
 
-
+                    print(f"Target node: {node}, agent: {graph.nodes[node]['agent']}")
                     for neighbor in graph.nodes[node]["agent"].neighbors:
                         print(f"Neighbor: {neighbor.unique_id}")
                         nodes_sizes[neighbor.unique_id-1] = 200
@@ -170,6 +172,7 @@ def Page():
                         node_size=nodes_sizes_temp,
                         linewidths=3
                     )
+                # nx.draw_networkx_labels(graph, pos, labels={n: n for n in list(model.value.graph.nodes)}, font_size=10)
                 
                 # nx.draw_networkx_nodes(graph, pos, node_size=nodes_sizes, node_color=color_map_face, edgecolors=color_map_edge, linewidths=3)
                 # plt.title(f"<k> = {k.value}, " +r"$\beta$" +f" = {beta.value}")
@@ -196,12 +199,22 @@ def Page():
             plt.show()
 
 
+        with solara.Card():
+            solara.Markdown("### Legend")
+            solara.Markdown("**Green edges**: Enforce compliance")
+            solara.Markdown("**Red edges**: Enforce deviation")
+            solara.Markdown("**Gray edges**: No enforcement")
+            solara.Markdown("**Green nodes**: Comply with the norm")
+            solara.Markdown("**Red nodes**: Deviate from the norm")
+            solara.Markdown("**Diamond nodes**: Believers")
+            solara.Markdown("**Circle nodes**: Non-believers")
+
 def setup_model(*args):
     """Initialize the model with the current parameters."""
     step_message.value = ""
     model.value = None  # Reset the model
     target.value = None  # Reset target
-    m = EmperosDilemma(N=N.value, K=steps.value, N_bel = N_believers.value, network_type=network.value, k=k.value, beta=beta.value)
+    m = EmperorsDilemma(N=N.value, K=K.value, N_bel = N_believers.value, network_type=network.value, k=k.value, beta=beta.value, neighborhood_type=neighborhood.value)
     model.value = m
     model_data = m.datacollector.get_model_vars_dataframe()
     # history.value = (model_data["cE"].tolist(), model_data["cC"].tolist(), model_data["cB"].tolist())
@@ -218,7 +231,7 @@ def run_model_app():
     is_running.value = True
     rerendere.value = False  # Disable re-rendering during the run
     target.value = None  # Reset target
-    m = EmperosDilemma(N=N.value, K=steps.value, N_bel = N_believers.value, network_type=network.value, k=k.value, beta=beta.value)
+    m = EmperorsDilemma(N=N.value, K=K.value, N_bel = N_believers.value, network_type=network.value, k=k.value, beta=beta.value, neighborhood_type=neighborhood.value)
     model.value = m
     print(f"Running model with N={N.value}, K={steps.value}, network_type={network.value}, k={k.value}, beta={beta.value}")
     for _ in range(steps.value):
@@ -237,7 +250,7 @@ def run_animated_model():
     step_message.value = ""
     target.value = None  # Reset target
     if model.value is None:
-        m = EmperosDilemma(N=N.value, K=steps.value, network_type=network.value, k=k.value, beta=beta.value)
+        m = EmperorsDilemma(N=N.value, K=K.value, network_type=network.value, k=k.value, beta=beta.value, neighborhood_type=neighborhood.value)
         model.value = m
     else:
         m = model.value
@@ -273,7 +286,7 @@ def select_target():
         all_nodes = list(model.value.graph.nodes)
         target.value = np.random.choice(len(all_nodes))
         current_substep.value = 0
-        step_message.value = f"Selected target agent: {target.value}."
+        step_message.value = f"Selected agent {target.value}"
 
 
 def next_single_step(current_substep_value):
@@ -283,7 +296,7 @@ def next_single_step(current_substep_value):
         all_nodes = list(graph.nodes)
         node_key = all_nodes[target.value]  # Get the actual node key
         target_agent = graph.nodes[node_key]["agent"]
-        
+        print(f"{target_agent == list(graph.nodes)[target.value-1]}")
         if current_substep.value == 1:
             step_message.value = target_agent.if_comply_message()
             target_agent.if_comply()

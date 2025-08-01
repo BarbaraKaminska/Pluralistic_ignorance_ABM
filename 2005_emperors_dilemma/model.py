@@ -23,6 +23,9 @@ def cC(model):
 def cB(model):
     return (np.mean([a.B for a in model.all_agents]) + 1) / 2
 
+def false_believers(model):
+    return np.count_nonzero([a.B == -1 and a.C == 1 for a in model.all_agents]) / model.N
+
 class Agent(Agent):
     def __init__(self, model):
         super().__init__(model)
@@ -53,17 +56,18 @@ class Agent(Agent):
 
     def if_enforce(self):
         if (-self.B/self.N_neighbors*np.sum([a.E for a in self.neighbors]) > self.S + self.K) and self.B != self.C:
-            self.E = self.B
-        elif self.S*self.W>self.K and self.B==self.C:
             self.E = -self.B
+        elif self.S*self.W>self.K and self.B==self.C:
+            self.E = self.B
         else: 
             self.E = 0 
 
     def if_enforce_message(self):
+        self.if_enforce()
         if self.E == 1:
             mess = f"Enforcing the norm: E = {self.E}." 
         elif self.E == -1:
-            mess = f"Enforcing the opposite of the norm: E = {self.E}."
+            mess = f"Enforcing deviation from the norm: E = {self.E}."
         else:
             mess = f"Not enforcing the norm: E = {self.E}."
 
@@ -76,7 +80,8 @@ class Agent(Agent):
 
     def if_comply_message(self):
         mess = f"Information from neighbors: {-self.B/self.N_neighbors*np.sum([a.E for a in self.neighbors]):.2f}; Strength of conviction: {self.S:.2f}; "
-        if -self.B/self.N_neighbors*np.sum([a.E for a in self.neighbors]) > self.S:
+        self.C = -self.B if -self.B/self.N_neighbors*np.sum([a.E for a in self.neighbors]) > self.S else self.B
+        if self.C == 1:
             mess += f"Complying with the norm: C = {self.C}."    
         else:
             mess += f"Not complying with the norm: C = {self.C}."
@@ -96,7 +101,7 @@ class Agent(Agent):
         return mess
 
 
-class EmperosDilemma(Model):
+class EmperorsDilemma(Model):
     def __init__(self, N, K, N_bel, network_type="square lattice", k=0.125, beta=0.5, neighborhood_type="Moore"):
         super().__init__()
         self.N = N
@@ -111,6 +116,14 @@ class EmperosDilemma(Model):
                             self.graph.add_edge((x, y), (x+1, y+1))  # diagonal down-right
                         if x+1 < int(np.sqrt(N)) and y-1 >= 0:
                             self.graph.add_edge((x, y), (x+1, y-1))  # diagonal up-right
+            else:
+                for x in range(int(np.sqrt(N))):
+                    for y in range(int(np.sqrt(N))):
+                        if x+1 < int(np.sqrt(N)):
+                            self.graph.add_edge((x, y), (x+1, y))  # right
+                        if y+1 < int(np.sqrt(N)):
+                            self.graph.add_edge((x, y), (x, y+1))  # down
+            print(neighborhood_type)
         elif network_type == "Watts-Strogatz":
             self.graph = nx.watts_strogatz_graph(N, k=k, p=beta)
         self.all_agents = []

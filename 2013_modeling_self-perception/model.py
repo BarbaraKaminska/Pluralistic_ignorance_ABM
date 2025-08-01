@@ -41,20 +41,11 @@ class Agent(Agent):
         self.y = y
         self.model = model
 
-        self.neighborhood = self.model.grid.get_neighborhood((self.x, self.y), moore=True, include_center=False)
-        # print(f"Neighborhood for agent at ({self.x}, {self.y}): {self.neighborhood}")
-        self.neighbors = [self.model.grid.get_cell_list_contents([pos]) for pos in self.neighborhood]
-        for pos in self.neighborhood:
-            try:
-                agents_at_pos = self.model.grid.get_cell_list_contents([pos[0], pos[1]])
-                print(f"{agents_at_pos.pos}")
-            except:
-                print(f"No agents at position {pos}")
-                continue
         self.best_n_clusters = None
         self.best_labels = None 
         self.best_centers = None
         self.g = float('inf')
+        self.neighbors = []
         
 
     def update_opinion(self):
@@ -178,7 +169,7 @@ class Agent(Agent):
         max_label = np.argmax(labels_count)
         self.op = self.best_centers[max_label][0]
         self.att = self.op
-        message += f" agent's opinion and attitude are updated to center of largest cluster: {self.op}"
+        message += f" agent's opinion and attitude are updated to center of largest cluster: {self.op:.2f}"
         return message, "0"
 
     def update_step3a_message(self):
@@ -208,14 +199,14 @@ class Agent(Agent):
 
         if O >= self.red: 
             self.op = self.best_centers[closest_group][0]
-            message += f"only agent's opinion is updated to center of closest cluster: {self.op}"
+            message += f"only agent's opinion is updated to center of closest cluster: {self.op:.2f}"
 
         elif O >= self.green:
             self.op = self.best_centers[closest_group][0]
             self.att = self.op
-            message += f" agent's opinion and attitude are updated to center of closest cluster: {self.op}"
+            message += f" agent's opinion and attitude are updated to center of closest cluster: {self.op:.2f}"
         else:
-            message += f" agent's opinion and attitude remain unchanged: {self.op}"
+            message += f" agent's opinion and attitude remain unchanged: {self.op:.2f}"
         return message, "0"
 
     def update_step4_message(self):
@@ -224,7 +215,7 @@ class Agent(Agent):
             avg_op = np.mean(compatible_neighbors + [self.op])
             self.op = avg_op 
             self.att = avg_op
-        message = f"Fallback individual averaging; agent's opinion and attitude are updated to average of compatible neighbors: {self.op}"
+        message = f"Agent's opinion and attitude are updated to average of compatible neighbors: {self.op:.2f}"
         return message, "0"
 
 class PluralisticIgnoranceModel(Model):
@@ -248,9 +239,16 @@ class PluralisticIgnoranceModel(Model):
                 agent = Agent(self, x, y)
                 self.grid.place_agent(agent, (x, y))
 
-        
+        for agent in self.grid.agents:
+            agent.neighbors = self.grid.get_neighbors((agent.x, agent.y), moore=True, include_center=False)
+            
+
+
     def step(self):
         self.data_collector.collect(self)
-        for agent in self.agents:
+        # agent = np.random.choice(self.agents)
+        
+        for _ in range(self.N):
+            agent = self.random.choice(self.grid.agents)
             agent.update_opinion()
 

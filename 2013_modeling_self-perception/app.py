@@ -124,26 +124,26 @@ def Page():
 
             plt.show()
 
-        with solara.Card(title="Network Visualization"):
-            # solara.Markdown("### Network Visualization")
-            if model.value is not None and rerendere.value:    
-                for i in range(N.value):
-                    plt.scatter(np.arange(steps.value), opinion_evolution.value[:, i], s=1, color='red')
-                # print(f"opinion_evolution: {opinion_evolution.value[0, :]}")
-                plt.xlabel("time step")
-                plt.ylabel("value")
-                plt.ylim(0, 1)
-            else:
+        # with solara.Card(title="Network Visualization"):
+        #     # solara.Markdown("### Network Visualization")
+        #     if model.value is not None and rerendere.value:    
+        #         for i in range(N.value):
+        #             plt.scatter(np.arange(steps.value), opinion_evolution.value[:, i], s=1, color='red')
+        #         # print(f"opinion_evolution: {opinion_evolution.value[0, :]}")
+        #         plt.xlabel("time step")
+        #         plt.ylabel("value")
+        #         plt.ylim(0, 1)
+        #     else:
                 
-                plt.figure(figsize=(6, 6))
-                plt.text(0., 0., "Setup the model \nto see network", horizontalalignment='center', verticalalignment='center', fontsize=16)
-                plt.xlim(-1.1, 1.1)
-                plt.ylim(-1.1, 1.1)
-            plt.xlabel("")
-            plt.ylabel("")
-            # plt.axis('off')  # Hide the axes
+        #         plt.figure(figsize=(6, 6))
+        #         plt.text(0., 0., "Setup the model \nto see network", horizontalalignment='center', verticalalignment='center', fontsize=16)
+        #         plt.xlim(-1.1, 1.1)
+        #         plt.ylim(-1.1, 1.1)
+        #     plt.xlabel("")
+        #     plt.ylabel("")
+        #     # plt.axis('off')  # Hide the axes
 
-            plt.show()
+        #     plt.show()
         
     with solara.Row():  # Side-by-side layout
         with solara.Card(title=""):
@@ -191,6 +191,7 @@ def setup_model():
     """Initialize the model with the current parameters."""
     model.value = None  # Reset the model
     target.value = None  # Reset target
+    target_neighbors.value = None  # Reset neighbors
     m = PluralisticIgnoranceModel(N.value, G.value, U.value, RED.value)
     model.value = m
     # model_data = m.datacollector.get_model_vars_dataframe()
@@ -230,7 +231,7 @@ def run_model_app():
     is_running.value = True
     rerendere.value = False  # Disable re-rendering during the run
     target.value = None  # Reset target
-    q_panel.value = None  # Reset q_panel
+    target_neighbors.value = None  # Reset neighbors
     m = PluralisticIgnoranceModel(N=N.value, G=G.value, U=U.value, RED=RED.value)
     model.value = m
     # m.run_model(steps.value)
@@ -248,7 +249,7 @@ def run_model_app():
 @task
 def run_animated_model():
     target.value = None  # Reset target
-    q_panel.value = None  # Reset q_panel
+    target_neighbors.value = None  # Reset neighbors
     if model.value is None:
         m = PluralisticIgnoranceModel(N=N.value, G=G.value, U=U.value, RED=RED.value)
         model.value = m
